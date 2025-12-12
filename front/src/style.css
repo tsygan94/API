@@ -1,0 +1,105 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+  line-height: 1.6;
+  transition: all 0.3s;
+}
+
+body.night-mode {
+  background: #121212;
+  color: #e0e0e0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(30, 60, 114, 0.4);
+}
+
+.btn.large { padding: 18px 40px; font-size: 1.2rem; }
+.btn.small { padding: 10px 24px; font-size: 0.95rem; }
+.btn.full-width { width: 100%; }
+.btn.outline {
+  background: transparent;
+  border: 2px solid #2a5298;
+  color: #2a5298;
+}
+.btn.outline:hover {
+  background: #2a5298;
+  color: white;
+}
+
+h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.night-mode h2 {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Общие улучшения */
+.subtitle {
+  text-align: center;
+  font-size: 1.3rem;
+  color: #666;
+  margin-bottom: 4rem;
+}
+.night-mode .subtitle { color: #aaa; }
+
+.loading, .empty-state {
+  text-align: center;
+  padding: 6rem 0;
+  color: #888;
+  font-size: 1.3rem;
+}
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid #f0f0f0;
+  border-top: 5px solid #2a5298;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1.5rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  h2 { font-size: 2rem; }
+  .btn { padding: 12px 24px; }
+}
