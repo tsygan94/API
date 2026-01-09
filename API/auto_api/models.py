@@ -16,7 +16,7 @@ class Car(TimeStampedModel):
     year = models.PositiveIntegerField("Год")
     price = models.DecimalField("Цена", max_digits=10, decimal_places=2)
     is_sold = models.BooleanField("Продано", default=False)
-    image = models.ImageField("Фото", upload_to='cars/', null=True, blank=True)
+    image_url = models.URLField("URL картинки", blank=True, null=True)  # ← новое поле вместо image
 
     def __str__(self):
         return f"{self.brand} {self.model} ({self.year})"
@@ -42,23 +42,35 @@ class Service(TimeStampedModel):
 class Order(TimeStampedModel):
     customer = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Клиент", related_name='orders')
     car = models.ForeignKey(Car, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Автомобиль")
-    services = models.ManyToManyField(Service, verbose_name="Услуги")
-    created_at = models.DateTimeField("Создан", auto_now_add=True)
+    services = models.ManyToManyField(Service, verbose_name="Услуги", blank=True)  # blank=True для возможности без услуг
     total_price = models.DecimalField(
         "Итого",
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
-        default=0,     
+        default=0,
         editable=False
     )
     notes = models.TextField("Примечания", blank=True)
     is_completed = models.BooleanField("Выполнен", default=False)
 
     def save(self, *args, **kwargs):
+        # Сначала сохраняем объект (чтобы можно было работать с m2m services)
         super().save(*args, **kwargs)
-        # Пересчитываем сумму после сохранения услуг
-        self.total_price = sum(service.price for service in self.services.all())
-        super().save(update_fields=['total_price'])
+
+        # Считаем total_price: цена машины (если есть) + все услуги
+        car_price = self.car.price if self.car else Decimal('0')
+        services_price = sum(service.price for service in self.services.all())
+        new_total = car_price + services_price
+
+        # Если изменилось — сохраняем
+        if new_total != self.total_price:
+            self.total_price = new_total
+            super().save(update_fields=['total_price'])
+
+        # Помечаем машину как проданную (если была выбрана)
+        if self.car and not self.car.is_sold:
+            self.car.is_sold = True
+            self.car.save(update_fields=['is_sold'])
 
     def __str__(self):
         return f"Заказ #{self.pk} – {self.customer}"

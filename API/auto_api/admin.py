@@ -73,22 +73,22 @@ class CarAdmin(ExportActionMixin, admin.ModelAdmin):
         (None, {
             'fields': ('brand', 'model', 'year', 'price', 'is_sold')
         }),
-        ('Фото', {
-            'fields': ('image', 'image_preview_full'),
-            'description': 'Предпросмотр изображения'
+        ('Картинка', {
+            'fields': ('image_url', 'image_preview_full'),
+            'description': 'Вставьте прямую ссылку на изображение (например, с unsplash.com или imgur.com)'
         }),
     )
 
     def image_preview(self, obj):
-        if obj.image:
-            return format_html('<img src="{}" style="height: 70px; border-radius: 6px;">', obj.image.url)
+        if obj.image_url:
+            return format_html('<img src="{}" style="height: 70px; border-radius: 6px;">', obj.image_url)
         return "—"
     image_preview.short_description = "Превью"
 
     def image_preview_full(self, obj):
-        if obj.image:
-            return format_html('<img src="{}" style="max-width: 600px; border-radius: 8px;">', obj.image.url)
-        return "Нет изображения"
+        if obj.image_url:
+            return format_html('<img src="{}" style="max-width: 600px; border-radius: 8px;">', obj.image_url)
+        return "Нет ссылки"
     image_preview_full.short_description = "Полное фото"
 
 

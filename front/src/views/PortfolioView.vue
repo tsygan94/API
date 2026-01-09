@@ -17,7 +17,7 @@
         <div v-for="car in cars" :key="car.id" class="car-card">
           <div class="car-image">
             <img 
-              :src="car.image || '/no-photo.jpg'" 
+              :src="car.image_url || '/no-photo.jpg'" 
               :alt="`${car.brand} ${car.model}`"
               @error="e => e.target.src = '/no-photo.jpg'"
             />
@@ -27,9 +27,10 @@
           <div class="car-info">
             <h3>{{ car.brand }} {{ car.model }}</h3>
             <p class="year">{{ car.year }} год</p>
-            <router-link :to="`/services?car=${car.id}`" class="btn small">
+            <router-link v-if="!car.is_sold" :to="`/services?car=${car.id}`" class="btn small">
               Заказать услуги
             </router-link>
+            <span v-else class="sold-text">Автомобиль продан</span>
           </div>
         </div>
       </div>
@@ -44,14 +45,11 @@ import axios from 'axios'
 const cars = ref([])
 const loading = ref(true)
 
-const formatPrice = (price) => {
-  return Number(price).toLocaleString('ru-RU')
-}
+const formatPrice = (price) => Number(price).toLocaleString('ru-RU')
 
 onMounted(async () => {
   try {
-    const res = await axios.get('/cars/')  // → http://localhost:8000/api/cars/
-    // DRF возвращает либо { results: [...] } либо просто массив
+    const res = await axios.get('/cars/')
     cars.value = res.data.results || res.data
   } catch (err) {
     console.error('Ошибка загрузки автомобилей:', err)

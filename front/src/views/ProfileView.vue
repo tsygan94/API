@@ -26,7 +26,7 @@
         <div v-for="order in orders" :key="order.id" class="order-card">
           <div class="order-header">
             <span class="order-id">Заказ №{{ order.id }}</span>
-            <span class="order-date">{{ order.created_at }}</span>
+            <span class="order-date">{{ formatDate(order.created_at) }}</span>
             <span class="order-status" :class="{ completed: order.is_completed }">
               {{ order.is_completed ? 'Выполнен' : 'В работе' }}
             </span>
@@ -42,7 +42,7 @@
             <p><strong>Услуги:</strong></p>
             <ul class="services-list">
               <li v-for="service in order.services_info" :key="service.id">
-                {{ service.name }} — {{ service.price }} ₽
+                {{ service.name }} — {{ formatPrice(service.price) }} ₽
               </li>
             </ul>
 
@@ -50,7 +50,7 @@
 
             <div class="order-price">
               <strong>Итого:</strong>
-              <span class="price">{{ order.total_price }} ₽</span>
+              <span class="price">{{ formatPrice(calculateTotal(order)) }} ₽</span>
             </div>
           </div>
         </div>
@@ -60,66 +60,72 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
 const token = ref(localStorage.getItem('access_token'))
-const username = ref('Пользователь')
+const username = ref(localStorage.getItem('username') || 'Пользователь')
 const orders = ref([])
 const loading = ref(true)
 
-// Главная фишка — следим за изменениями токена в localStorage
-const checkAuth = () => {
-  const newToken = localStorage.getItem('access_token')
-  if (newToken !== token.value) {
-    token.value = newToken
-  }
+const formatPrice = (price) => {
+  return Number(price).toLocaleString('ru-RU')
 }
 
-// Запускаем проверку каждые 500 мс (Vue + роутинг не всегда ловит изменения localStorage)
-const stopWatching = setInterval(checkAuth, 500)
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('ru-RU')
+}
 
-// При монтировании и при изменении токена — грузим заказы
-const loadOrders = async () => {
-  if (!token.value) {
-    loading.value = false
-    return
+// Подсчёт итоговой суммы для одного заказа (машина + услуги)
+const calculateTotal = (order) => {
+  let total = 0
+
+  // Цена машины
+  if (order.car_info && order.car_info.price) {
+    total += Number(order.car_info.price)
   }
 
+  // Цена всех услуг
+  if (order.services_info && Array.isArray(order.services_info)) {
+    order.services_info.forEach(service => {
+      if (service.price) {
+        total += Number(service.price)
+      }
+    })
+  }
+
+  return total
+}
+
+const loadOrders = async () => {
+  if (!token.value) return
+  loading.value = true
   try {
     const res = await axios.get('/orders/', {
       headers: { Authorization: `Bearer ${token.value}` }
     })
     orders.value = res.data.results || res.data || []
-    username.value = localStorage.getItem('username') || 'Пользователь'
   } catch (err) {
-    console.error(err)
     if (err.response?.status === 401) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      token.value = null
+      localStorage.clear()
       router.push('/login')
     }
+    console.error(err)
   } finally {
     loading.value = false
   }
 }
 
-// Грузим при первом заходе
-onMounted(() => {
-  loadOrders()
-})
+onMounted(loadOrders)
 
-// И каждый раз, когда токен меняется (после логина)
 watch(token, () => {
-  loading.value = true
-  loadOrders()
+  if (token.value) {
+    username.value = localStorage.getItem('username') || 'Пользователь'
+    loadOrders()
+  }
 })
-
-// Очищаем интервал при выходе из компонента
-onUnmounted(() => clearInterval(stopWatching))
 </script>
 
 <style scoped>

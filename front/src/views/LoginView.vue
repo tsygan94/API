@@ -43,6 +43,7 @@ const error = ref('')
 const router = useRouter()
 
 const login = async () => {
+  error.value = ''
   try {
     const res = await axios.post('/token/', { 
       username: username.value,
@@ -50,6 +51,7 @@ const login = async () => {
     })
     localStorage.setItem('access_token', res.data.access)
     localStorage.setItem('refresh_token', res.data.refresh)
+    localStorage.setItem('username', username.value)
     router.push('/profile')
   } catch (err) {
     error.value = 'Неверный логин или пароль'

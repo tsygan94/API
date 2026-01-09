@@ -1,6 +1,5 @@
-<!-- ServicesView.vue -->
 <template>
-  <div class="configurator-page">
+  <div class="configurator-page container">
     <h2>Оформление заказа в Royal Cars</h2>
     <p class="subtitle">Выберите автомобиль (если покупаете) и нужные услуги</p>
 
@@ -10,7 +9,7 @@
           <label>Автомобиль (опционально, если покупаете)</label>
           <select v-model="form.car" class="modern-select">
             <option :value="null">— Без покупки автомобиля —</option>
-            <option v-for="car in cars" :key="car.id" :value="car.id">
+            <option v-for="car in availableCars" :key="car.id" :value="car.id">
               {{ car.brand }} {{ car.model }} {{ car.year }} г. — {{ formatPrice(car.price) }} ₽
             </option>
           </select>
@@ -21,7 +20,7 @@
           <div class="services-list">
             <label v-for="service in services" :key="service.id" class="service-checkbox">
               <input type="checkbox" :value="service.id" v-model="form.services" />
-              <span style="margin-left: 20px;">{{ service.name }} — {{ formatPrice(service.price) }} ₽</span>
+              <span>{{ service.name }} — {{ formatPrice(service.price) }} ₽</span>
             </label>
           </div>
         </div>
@@ -36,15 +35,18 @@
           <div class="price-value">{{ formatPrice(totalPrice) }} ₽</div>
         </div>
 
-        <button v-if="token" @click="createOrder" class="btn full-width large" :disabled="loading || form.services.length === 0">
+        <button v-if="token" @click="createOrder" class="btn full-width large" :disabled="loading">
           {{ loading ? 'Оформляем...' : 'Создать заказ' }}
         </button>
         <router-link v-else to="/login" class="btn full-width large login-btn">
           Войти для оформления
         </router-link>
 
-        <div v-if="orderSuccess" class="success-msg text-center">
+        <div v-if="orderSuccess" class="success-msg">
           Заказ успешно создан! Скоро свяжемся с вами.
+        </div>
+        <div v-if="orderError" class="error-msg">
+          {{ orderError }}
         </div>
       </div>
     </div>
@@ -58,6 +60,7 @@ import axios from 'axios'
 const token = localStorage.getItem('access_token')
 const loading = ref(false)
 const orderSuccess = ref(false)
+const orderError = ref('')
 
 const cars = ref([])
 const services = ref([])
@@ -68,60 +71,58 @@ const form = ref({
   notes: ''
 })
 
-const notesVisible = computed(() => form.value.services.length > 0)
+const notesVisible = computed(() => form.value.services.length > 0 || form.value.car !== null)
 
-onMounted(async () => {
-  try {
-    const [carRes, servRes] = await Promise.all([
-      axios.get('/cars/'),
-      axios.get('/services/')
-    ])
-    cars.value = carRes.data.results || carRes.data
-    services.value = servRes.data.results || servRes.data
-  } catch (err) {
-    console.error('Ошибка загрузки данных')
+const availableCars = computed(() => cars.value.filter(car => !car.is_sold))
+
+const totalPrice = computed(() => {
+  let total = 0
+  if (form.value.car) {
+    const car = cars.value.find(c => c.id === form.value.car)
+    if (car) total += Number(car.price)
   }
+  form.value.services.forEach(id => {
+    const service = services.value.find(s => s.id === id)
+    if (service) total += Number(service.price)
+  })
+  return total
 })
-
-const carPrice = computed(() => {
-  if (!form.value.car) return 0
-  const car = cars.value.find(c => c.id === form.value.car)
-  return car ? Number(car.price) : 0
-})
-
-const servicesPrice = computed(() => {
-  return services.value
-    .filter(s => form.value.services.includes(s.id))
-    .reduce((sum, s) => sum + Number(s.price), 0)
-})
-
-const totalPrice = computed(() => carPrice.value + servicesPrice.value)
 
 const formatPrice = (price) => Number(price).toLocaleString('ru-RU')
 
-const createOrder = async () => {
-  if (form.value.services.length === 0) return
-
-  loading.value = true
+const loadData = async () => {
   try {
-    await axios.post('/orders/', {
-      car: form.value.car,
-      services: form.value.services,
-      notes: form.value.notes
-    }, {
+    const [carsRes, servicesRes] = await Promise.all([
+      axios.get('/cars/'),
+      axios.get('/services/')
+    ])
+    cars.value = carsRes.data.results || carsRes.data
+    services.value = servicesRes.data.results || servicesRes.data
+  } catch (err) {
+    orderError.value = 'Не удалось загрузить автомобили и услуги'
+  }
+}
+
+onMounted(loadData)
+
+const createOrder = async () => {
+  loading.value = true
+  orderError.value = ''
+  try {
+    await axios.post('/orders/', form.value, {
       headers: { Authorization: `Bearer ${token}` }
     })
     orderSuccess.value = true
     form.value = { car: null, services: [], notes: '' }
+    await loadData() // Перезагрузка списка машин после покупки
     setTimeout(() => orderSuccess.value = false, 5000)
   } catch (e) {
-    alert('Ошибка создания заказа')
+    orderError.value = e.response?.data?.detail || 'Ошибка создания заказа'
   } finally {
     loading.value = false
   }
 }
 </script>
-
 
 <style scoped>
 .configurator-page {

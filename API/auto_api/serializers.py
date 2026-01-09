@@ -20,7 +20,7 @@ class RegisterSerializer(serializers.Serializer):
 class CarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Car
-        fields = '__all__'
+        fields = '__all__' 
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -32,6 +32,8 @@ class ServiceSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     customer = UserSerializer(read_only=True)
     car_info = CarSerializer(source='car', read_only=True)
+    services_info = ServiceSerializer(source='services', many=True, read_only=True)
+    total_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     services = serializers.PrimaryKeyRelatedField(
         many=True,
@@ -39,8 +41,6 @@ class OrderSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True
     )
-
-    services_info = ServiceSerializer(source='services', many=True, read_only=True)
 
     class Meta:
         model = Order
